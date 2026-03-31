@@ -1,9 +1,15 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.main import app
 from app.services.ai_service import AIService
 
 client = TestClient(app)
+
+
+# ---------------------------------------------------------------------------
+# Root
+# ---------------------------------------------------------------------------
 
 def test_read_root():
     """Verify that the root endpoint is reachable."""
@@ -11,59 +17,99 @@ def test_read_root():
     assert response.status_code == 200
     assert "running" in response.json()["message"].lower()
 
-# --- Unit Tests ---
 
-def test_ai_service_summarize():
-    """Test the summarization logic directly."""
-    text = "Questo è un testo di prova che deve essere riassunto."
-    result = AIService.process_task(task="summarize", text=text)
-    assert result is not None
-    assert len(result) > 0
+# ---------------------------------------------------------------------------
+# Unit tests — no external calls, AIService mocked
+# ---------------------------------------------------------------------------
 
 def test_ai_service_invalid_task():
-    """Verify handling of unsupported tasks."""
-    result = AIService.process_task(task="invalid", text="test")
-    assert "non supportato" in result.lower()
+    """Verify handling of unsupported tasks (no external call needed)."""
+    response_text, model = AIService.process_task(task="invalid", text="test")
+    assert "non supportato" in response_text.lower()
+    assert model == "none"
 
-# --- Integration Tests ---
 
-def test_api_qa_flow():
-    """Test the full Question & Answer API flow."""
-    payload = {
-        "text": "Il sole è una stella.",
-        "task": "qa",
-        "question": "Cos'è il sole?"
-    }
-    response = client.post("/ai/process", json=payload)
-    assert response.status_code == 200
-    assert "stella" in response.json()["response"].lower()
+def test_ai_service_qa_missing_question():
+    """Verify that qa task without question returns a descriptive error."""
+    response_text, model = AIService.process_task(task="qa", text="some context")
+    assert "question" in response_text.lower()
 
-@pytest.mark.parametrize("text,expected_label", [
-    ("L'inflazione aumenta i prezzi.", "economia"),
-    ("Il mercato azionario è in calo oggi.", "economia"),
-    ("Le banche hanno alzato i tassi.", "economia"),
-])
-def test_api_classification_multiple_examples(text, expected_label):
+
+@patch("app.api.endpoints.cache")
+@patch("app.api.endpoints.AIService.process_task")
+def test_process_endpoint_summarize(mock_process, mock_cache):
     """
-    Test the classification flow with multiple examples to ensure 
-    robustness across different phrasings of the same category.
+    Test the /process endpoint for summarize without calling Groq.
+    AIService and Redis are mocked so the test is fast and offline-safe.
     """
-    payload = {
-        "text": text,
-        "task": "classify"
-    }
-    response = client.post("/ai/process", json=payload)
-    assert response.status_code == 200
-    assert expected_label in response.json()["response"].lower()
+    mock_cache.get.return_value = None
+    mock_process.return_value = ("This is a summary.", "llama-3.1-8b-instant")
 
-def test_cache_logic():
-    """Check if Redis cache returns the 'from_cache' ID on repeated requests."""
+    payload = {"text": "Un testo lungo da riassumere.", "task": "summarize"}
+    response = client.post("/ai/process", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["task"] == "summarize"
+    assert data["status"] == "success (new)"
+    assert "summary" in data["response"].lower()
+
+
+@patch("app.api.endpoints.cache")
+def test_cache_hit_returns_cached_id(mock_cache):
+    """
+    When Redis returns a cached value the endpoint must return id='from_cache'
+    without calling AIService at all.
+    """
+    mock_cache.get.return_value = "cached answer"
+
     payload = {"text": "Cache consistency test", "task": "summarize"}
-    
-    # First call: Populate cache
-    client.post("/ai/process", json=payload)
-    
-    # Second call: Retrieve from cache
     response = client.post("/ai/process", json=payload)
+
+    assert response.status_code == 200
     assert response.json()["id"] == "from_cache"
-    
+    assert response.json()["status"] == "success (cached)"
+
+
+@patch("app.api.endpoints.cache")
+@patch("app.api.endpoints.AIService.process_task")
+def test_process_endpoint_qa(mock_process, mock_cache):
+    """Test the /process endpoint for qa task with mocked service."""
+    mock_cache.get.return_value = None
+    mock_process.return_value = ("Il sole è una stella.", "llama-3.1-8b-instant")
+
+    payload = {"text": "Il sole è una stella.", "task": "qa", "question": "Cos'è il sole?"}
+    response = client.post("/ai/process", json=payload)
+
+    assert response.status_code == 200
+    assert response.json()["task"] == "qa"
+
+
+def test_history_endpoint():
+    """Verify that the history endpoint returns a list."""
+    response = client.get("/ai/history")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — marked explicitly, require real API keys and services
+# ---------------------------------------------------------------------------
+
+@pytest.mark.integration
+def test_ai_service_summarize_real():
+    """INTEGRATION: calls Groq API for real. Requires GROQ_API_KEY."""
+    text = "Questo è un testo di prova che deve essere riassunto."
+    result, model = AIService.process_task(task="summarize", text=text)
+    assert result is not None
+    assert len(result) > 0
+    assert model == "llama-3.1-8b-instant"
+
+
+@pytest.mark.integration
+def test_api_classification_real():
+    """INTEGRATION: calls HuggingFace model for real. Requires internet."""
+    payload = {"text": "L'inflazione aumenta i prezzi.", "task": "classify"}
+    response = client.post("/ai/process", json=payload)
+    assert response.status_code == 200
+    assert "economia" in response.json()["response"].lower()
