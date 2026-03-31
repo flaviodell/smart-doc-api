@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from .core.database import engine, Base
+from .api.endpoints import router as ai_router
 
-# Crea le tabelle nel DB (se non esistono)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Smart Doc API")
+
+app.include_router(ai_router, prefix="/ai", tags=["AI Operations"])
 
 @app.get("/")
 def read_root():
