@@ -51,8 +51,7 @@ FastAPI (port 8000)
 | Logging | loguru |
 | Testing | pytest + unittest.mock |
 | Containerization | Docker / Docker Compose |
-| CI/CD | GitHub Actions |
-| Cloud Platform | Render (PaaS) |
+| CI/CD | GitHub Actions + Render (PaaS) |
 
 ---
 
