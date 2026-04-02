@@ -1,6 +1,8 @@
 # Smart Doc API
 
-![CI](https://github.com/flaviodell/smart-doc-api/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/flaviodell/smart-doc-api/actions/workflows/ci.yml/badge.svg) 
+
+[![Live Demo](https://img.shields.io/badge/live-demo-brightgreen)](https://smart-doc-api.onrender.com/docs)
 
 A production-ready REST API that exposes AI capabilities (summarization, Q&A, text classification) built with FastAPI, PostgreSQL, Redis, and Docker. Designed to demonstrate end-to-end AI engineering skills: from model integration to containerized deployment with CI/CD.
 
