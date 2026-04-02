@@ -16,7 +16,7 @@ A production-ready REST API that exposes AI capabilities (summarization, Q&A, te
 - **Redis** caching layer — repeated requests are served in <10ms without calling the LLM
 - **Structured logging** with loguru — timestamped, leveled, written to stdout and rotating file
 - **Docker Compose** orchestration of 3 services (app, PostgreSQL, Redis)
-- **GitHub Actions** CI pipeline — runs 7 automated tests on every push with real PostgreSQL and Redis services
+- **GitHub Actions & Render** CI/CD pipeline — runs automated tests on every push and deploys the Dockerized app to a public URL
 
 ---
 
@@ -52,6 +52,7 @@ FastAPI (port 8000)
 | Testing | pytest + unittest.mock |
 | Containerization | Docker / Docker Compose |
 | CI/CD | GitHub Actions |
+| Cloud Platform | Render (PaaS) |
 
 ---
 
