@@ -1,30 +1,28 @@
 from groq import Groq
-from transformers import pipeline
 from ..core.config import settings
 
 client = Groq(api_key=settings.GROQ_API_KEY)
 
-classifier = pipeline("zero-shot-classification", model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
-
 GROQ_MODEL = "llama-3.1-8b-instant"
-HF_MODEL = "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
 
 
 class AIService:
     @staticmethod
     def process_task(task: str, text: str, question: str = None) -> tuple[str, str]:
-        """
-        Process an AI task and return a tuple (response_text, model_used).
-        Returning model_used allows the caller to log it accurately in the DB
-        instead of relying on a hardcoded placeholder.
-        """
         if task == "classify":
-            candidate_labels = ["tecnologia", "scienza", "sport", "economia", "politica"]
-            result = classifier(text, candidate_labels)
-            best_label = result["labels"][0]
-            confidence = result["scores"][0]
-            response = f"Categoria: {best_label} (Confidenza: {confidence:.2f})"
-            return response, HF_MODEL
+            prompt = (
+                f"Classify the following text into exactly one of these categories: "
+                f"tecnologia, scienza, sport, economia, politica.\n\n"
+                f"Text: {text}\n\n"
+                f"Respond with only the category name in Italian, nothing else."
+            )
+            completion = client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+            )
+            label = completion.choices[0].message.content.strip().lower()
+            return f"Categoria: {label}", GROQ_MODEL
 
         elif task == "summarize":
             prompt = f"Summarize the following text briefly:\n\n{text}"
@@ -43,3 +41,4 @@ class AIService:
             temperature=0.1,
         )
         return completion.choices[0].message.content, GROQ_MODEL
+    

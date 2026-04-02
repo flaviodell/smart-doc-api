@@ -28,8 +28,7 @@ FastAPI (port 8000)
   ├── Redis cache ──► cache hit → return immediately
   │
   ├── AIService
-  │     ├── Groq API (summarize, qa) — Llama 3.1 8B
-  │     └── HuggingFace (classify) — mDeBERTa zero-shot
+  │     └── Groq API (summarize, qa, classify) — Llama 3.1 8B
   │
   └── PostgreSQL
         ├── ai_interactions — full request/response history
@@ -44,7 +43,7 @@ FastAPI (port 8000)
 |---|---|
 | Backend | FastAPI + uvicorn |
 | AI — LLM | Llama 3.1 8B via Groq API |
-| AI — Classification | mDeBERTa-v3 via HuggingFace |
+| AI — Classification | Zero-shot classification via Groq API (Llama 3.1 8B) |
 | Database | PostgreSQL 15 + SQLAlchemy |
 | Cache | Redis 7 |
 | Logging | loguru |
