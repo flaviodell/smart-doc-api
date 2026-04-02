@@ -9,7 +9,7 @@ A production-ready REST API that exposes AI capabilities (summarization, Q&A, te
 ## What it demonstrates
 
 - **FastAPI** backend with async endpoints and auto-generated Swagger UI
-- **RAG-style AI pipeline**: Groq LLM (Llama 3.1 8B) for summarization and Q&A, HuggingFace for zero-shot classification
+- **RAG-style AI pipeline**: Groq LLM (Llama 3.1 8B) for summarization, Q&A and zero-shot classification
 - **PostgreSQL** persistence for interaction history and performance metrics
 - **Redis** caching layer — repeated requests are served in <10ms without calling the LLM
 - **Structured logging** with loguru — timestamped, leveled, written to stdout and rotating file
@@ -172,7 +172,7 @@ smart-doc-api/
 │   ├── schemas/
 │   │   └── request.py         # Pydantic request schemas
 │   ├── services/
-│   │   └── ai_service.py      # AI logic (Groq + HuggingFace)
+│   │   └── ai_service.py      # AI logic (Groq)
 │   └── main.py                # FastAPI app entry point
 ├── tests/
 │   └── test_main.py           # pytest test suite
