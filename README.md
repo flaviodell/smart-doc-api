@@ -25,6 +25,9 @@ A production-ready REST API that exposes AI capabilities (summarization, Q&A, te
 Client
   │
   ▼
+Render (cloud deployment)
+  │
+  ▼
 FastAPI (port 8000)
   │
   ├── Redis cache ──► cache hit → return immediately
@@ -36,7 +39,22 @@ FastAPI (port 8000)
         ├── ai_interactions — full request/response history
         └── ai_metrics — latency, cache hit rate, model usage
 ```
-
+ 
+**CI/CD flow:**
+```
+push to main
+  │
+  ▼
+GitHub Actions — pytest (7 tests)
+  │
+  ├── tests fail → stop, no deploy
+  │
+  └── tests pass
+        │
+        ▼
+      Render auto-deploy → live at https://smart-doc-api.onrender.com
+```
+ 
 ---
 
 ## Tech stack
@@ -74,7 +92,6 @@ source venv/bin/activate        # Linux/macOS
 venv\Scripts\activate           # Windows
 
 # 3. Install dependencies
-pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 
 # 4. Configure environment variables
@@ -125,6 +142,15 @@ docker compose down
 
 ### Example request
 ```bash
+# Live demo
+curl -X POST https://smart-doc-api.onrender.com/ai/process \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "The French Revolution was a period of radical political and social transformation in France between 1789 and 1799, culminating in the rise of Napoleon Bonaparte.",
+    "task": "summarize"
+  }'
+ 
+# Local
 curl -X POST http://localhost:8000/ai/process \
   -H "Content-Type: application/json" \
   -d '{
@@ -152,7 +178,7 @@ pytest -v
 
 7 unit and integration tests covering: root endpoint, invalid task handling, mocked summarize and Q&A endpoints, cache hit logic, and history endpoint.
 
-To run integration tests (requires real API keys):
+To run integration tests (requires real API keys and running services):
 ```bash
 pytest -v -m integration
 ```
@@ -179,7 +205,7 @@ smart-doc-api/
 ├── tests/
 │   └── test_main.py           # pytest test suite
 ├── .github/workflows/
-│   └── ci.yml                 # GitHub Actions CI pipeline
+│   └── ci.yml                 # GitHub Actions CI/CD pipeline
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
